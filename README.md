@@ -1,88 +1,187 @@
 # Kiki payment
 
-MCHJ, YTT va kichik jamoalar uchun to‘lov jarayonini soddalashtiradi. MVP va tez ishga tushadigan loyihalar uchun qulay.
+Asosiy maqsad: **MCHJ**, **YTT** va kichik jamoalar uchun to‘lov jarayonini soddalashtirish. Ayniqsa **MVP loyihalar** va tez ishga tushirish kerak bo‘lgan sayt/ilovalar uchun qulay.
 
 ---
 
 ## Havolalar
 
-| | |
-|---|---|
-| API | http://16.171.154.226:8000 |
-| Swagger | http://16.171.154.226:8000/docs |
-| Bot | [@kiki_payment_bot](https://t.me/kiki_payment_bot) |
+| Nima | Manzil |
+|------|--------|
+| API (base URL) | http://16.171.154.226:8000 |
+| Swagger (API hujjati) | http://16.171.154.226:8000/docs |
+| Telegram bot | [@kiki_payment_bot](https://t.me/kiki_payment_bot) |
+---
 
-> Avval [@HUMOcardbot](https://t.me/HUMOcardbot) da **Start** bosing.
+## 1-qadam — Bot orqali ro‘yxatdan o‘tish
+
+Barcha ro‘yxatdan o‘tish va kirish **faqat Telegram bot** orqali.
+
+1. [@kiki_payment_bot](https://t.me/kiki_payment_bot) ni oching.
+2. **Start** yoki `/start` bosing.
+3. Tilni tanlang (O‘zbek / Rus / Ingliz).
+4. Telefon raqamingizni yuboring.
+5. Telegramga kelgan kodni kiriting.
+6. Agar 2FA yoqilgan bo‘lsa — qo‘shimcha parolni ham kiriting.
+7. Muvaffaqiyatli kirgandan keyin asosiy menyu ochiladi.
+
+> Yangi foydalanuvchi — ro‘yxatdan o‘tadi.  
+> Oldin kirgan bo‘lsangiz — mavjud akkauntga kirasiz.
 
 ---
 
-## Tez start
+## 2-qadam — Do‘kon (shop) yaratish
 
-```
-Bot → Do'kon → create → mijoz to'laydi → check → SUCCESS
-```
+1. Botda **Do‘konlar** tugmasini bosing.
+2. **Do‘kon qo‘shish** ni tanlang.
+3. Do‘kon nomini yozing (masalan: `Mening internet do'konim`).
+4. Bot sizga beradi:
+   - **Shop ID** — do‘kon identifikatori
+   - **Password** — API uchun maxfiy parol
 
-1. **Bot** — [@kiki_payment_bot](https://t.me/kiki_payment_bot) → Start → telefon → kod → kirish
-2. **Do'kon** — Do'konlar → Do'kon qo'shish → **Shop ID** + **Password** oling
-3. **API** — to'lov oching va tekshiring (pastda)
+Bu ma’lumotlarni xavfsiz joyda saqlang. Sayt yoki ilovangiz har bir API so‘rovida ularni ishlatadi.
 
-Ro'yxatdan o'tish va do'kon yaratish **faqat bot** orqali. Swaggerda faqat to'lov API ko'rinadi.
+> Shop yaratish va boshqarish ham **faqat bot** orqali. Swaggerda bu qismlar ko‘rinmaydi — ataylab yashirilgan.
 
 ---
 
-## API
+### 3-qadam -  To‘lov yaratish
 
-Har bir so'rovda header:
+**URL:** `POST /payments/create`
 
-```
-X-Kiki-Shop-Id: sizning_shop_id
-X-Kiki-Shop-Password: sizning_shop_password
-```
+**Tavsif:** Yangi to‘lov ochish. Javobda `payable_amount` va `expires_in_sec` keladi — ularni mijozga ko‘rsating.
 
-### To'lov yaratish — `POST /payments/create`
-
-Mijozga javobdagi **`payable_amount`** ni ko'rsating (so'ralgan summadan biroz farq qilishi mumkin — bu normal).
+**Misol:**
 
 ```bash
 curl -X POST 'http://16.171.154.226:8000/payments/create' \
+  -H 'accept: application/json' \
   -H 'X-Kiki-Shop-Id: sizning_shop_id' \
   -H 'X-Kiki-Shop-Password: sizning_shop_password' \
   -H 'Content-Type: application/json' \
-  -d '{"amount": 5000, "external_order_id": "buyurtma-123"}'
+  -d '{
+    "amount": 5000,
+    "external_order_id": "buyurtma-123"
+  }'
 ```
 
-| Maydon | Izoh |
-|--------|------|
-| `amount` | Summa (min **5000** so'm) |
-| `external_order_id` | Sizning buyurtma ID (masalan `buyurtma-123`) |
+**So‘rov maydonlari:**
 
-### To'lovni tekshirish — `POST /payments/check`
+| Maydon | Turi | Majburiy | Izoh |
+|--------|------|----------|------|
+| `amount` | integer | Ha | So‘ralgan summa (so‘m), minimal 5000 |
+| `external_order_id` | string | Yo‘q | O‘z buyurtma ID ingiz (tavsiya etiladi) |
 
-To'lov ekranida har **2–3 soniyada** chaqiring.
+**Namuna javob:**
+
+```json
+{
+  "payment_id": "abc123...",
+  "shop_id": "shop_xyz",
+  "external_order_id": "buyurtma-123",
+  "requested_amount": 5000,
+  "payable_amount": 5003,
+  "expires_at": "2026-06-12T15:30:00",
+  "expires_in_sec": 120,
+  "status": "PENDING",
+  "paid_at": null
+}
+```
+
+Mijozga **`payable_amount`** ni ko‘rsating — masalan: **5003 so‘m**.
+
+---
+
+### 4.2. To‘lovni tekshirish (tavsiya etiladi)
+
+**URL:** `POST /payments/check`
+
+**Tavsif:** `external_order_id` bo‘yicha to‘lov holatini tekshiradi. HUMO xabarlarini skanerlab, mos kelgan to‘lovni `SUCCESS` qiladi.
+
+**Misol:**
 
 ```bash
 curl -X POST 'http://16.171.154.226:8000/payments/check' \
+  -H 'accept: application/json' \
   -H 'X-Kiki-Shop-Id: sizning_shop_id' \
   -H 'X-Kiki-Shop-Password: sizning_shop_password' \
   -H 'Content-Type: application/json' \
-  -d '{"external_order_id": "buyurtma-123"}'
+  -d '{
+    "external_order_id": "buyurtma-123"
+  }'
 ```
 
-**Status:** `PENDING` kutilmoqda · `SUCCESS` to'landi · `EXPIRED` vaqt tugadi
+**So‘rov maydonlari:**
+
+| Maydon | Turi | Majburiy | Izoh |
+|--------|------|----------|------|
+| `external_order_id` | string | Ha | Yaratishda bergan buyurtma ID |
+
+**Integratsiya maslahati:** foydalanuvchi to‘lov ekranida tursa, har 2–3 soniyada shu endpointni chaqiring. `SUCCESS` bo‘lsa — buyurtmani tasdiqlang. `EXPIRED` bo‘lsa — yangi to‘lov oching.
 
 ---
 
-## Muhim
+### 4.3. Bitta to‘lovni ID bo‘yicha olish
 
-- Mijoz **payable_amount** ni aniq yuborishi kerak
-- Minimal summa: **5000 so'm**
-- To'lov muddati: **~2 daqiqa**
-- Faqat HUMO **to'ldirish** (➕) hisobga olinadi
+**URL:** `GET /payments/{payment_id}`
 
-Boshqa endpointlar (Swaggerda): `GET /payments`, `GET /payments/{id}`
+**Tavsif:** `payment_id` bo‘yicha to‘lov ma’lumotini qaytaradi (tekshirmaydi, faqat o‘qiydi).
+
+**Misol:**
+
+```bash
+curl -X GET 'http://16.171.154.226:8000/payments/abc123...' \
+  -H 'accept: application/json' \
+  -H 'X-Kiki-Shop-Id: sizning_shop_id' \
+  -H 'X-Kiki-Shop-Password: sizning_shop_password'
+```
 
 ---
 
-## Yordam
+### 4.4. To‘lovlar ro‘yxati
 
-[@kiki_payment_bot](https://t.me/kiki_payment_bot) → **Yordam**
+**URL:** `GET /payments`
+
+**Tavsif:** Do‘koningizdagi to‘lovlar ro‘yxati. Filtrlar ixtiyoriy.
+
+**Misol:**
+
+```bash
+curl -X GET 'http://16.171.154.226:8000/payments?limit=20&offset=0&status=PENDING' \
+  -H 'accept: application/json' \
+  -H 'X-Kiki-Shop-Id: sizning_shop_id' \
+  -H 'X-Kiki-Shop-Password: sizning_shop_password'
+```
+
+**Query parametrlar (ixtiyoriy):**
+
+| Parametr | Izoh |
+|----------|------|
+| `limit` | Nechta yozuv (1–200, default 50) |
+| `offset` | Sahifalash uchun offset |
+| `status` | `PENDING`, `SUCCESS` yoki `EXPIRED` |
+| `external_order_id` | Aniq buyurtma bo‘yicha qidirish |
+| `created_from` | Dan (ISO vaqt) |
+| `created_to` | Gacha (ISO vaqt) |
+
+---
+
+### 4.5. To‘lovni ID bo‘yicha tekshirish (eski usul)
+
+**URL:** `POST /payments/{payment_id}/check`
+
+**Tavsif:** `payment_id` orqali tekshiradi. Yangi integratsiyalar uchun `POST /payments/check` ni ishlating — u `external_order_id` bilan qulayroq.
+
+**Misol:**
+
+```bash
+curl -X POST 'http://16.171.154.226:8000/payments/abc123.../check' \
+  -H 'accept: application/json' \
+  -H 'X-Kiki-Shop-Id: sizning_shop_id' \
+  -H 'X-Kiki-Shop-Password: sizning_shop_password'
+```
+---
+
+## Aloqa
+
+Savollar va yordam: [@kiki_payment_bot](https://t.me/kiki_payment_bot)
