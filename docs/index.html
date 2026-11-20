@@ -255,7 +255,9 @@ X-Kiki-Shop-Password: &lt;PASSWORD&gt;
 <script>
 (function(){
   var KEY='kiki-lang', lang='uz';
-  try { var saved=localStorage.getItem(KEY); if(saved==='uz'||saved==='ru'){lang=saved;} else { lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; } } catch(e){ lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; }
+  var q=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+  if(q==='uz'||q==='ru'){ lang=q; } else {
+  try { var saved=localStorage.getItem(KEY); if(saved==='uz'||saved==='ru'){lang=saved;} else { lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; } } catch(e){ lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; } }
   function show(l){
     document.documentElement.lang=l;
     document.querySelectorAll('.wrap').forEach(function(w){ w.classList.toggle('hidden', !w.classList.contains('lang-'+l)); w.classList.toggle('lang-on', w.classList.contains('lang-'+l)); });
