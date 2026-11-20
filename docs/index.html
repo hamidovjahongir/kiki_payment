@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="logo/kiki-mark.svg" type="image/svg+xml">
+<title>Kiki Payment — API hujjati</title>
+<meta name="description" content="Kiki Pay integratsiya yo'riqnomasi: do'kon tokeni, to'lov yaratish, holat, webhook va xatolar.">
+<style>
+:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5b6475;--line:#e3e6ec;--accent:#2F7BF5;--code:#0f1420;--codetext:#e6edf7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0e1116;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#262c36;--code:#0a0d12;--accent:#3E88F7}}
+:root[data-theme="dark"]{--bg:#0e1116;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#262c36;--code:#0a0d12;--accent:#3E88F7}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:12px}
+header b{font-size:18px}header .dot{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1200px;margin:0 auto}
+nav{position:sticky;top:60px;align-self:start;height:calc(100vh - 60px);overflow:auto;padding:20px 16px;border-right:1px solid var(--line)}
+nav a{display:block;color:var(--muted);text-decoration:none;padding:5px 8px;border-radius:6px;font-size:14px}
+nav a:hover{color:var(--text);background:var(--line)}nav a.sub{padding-left:20px;font-size:13px}
+main{padding:28px 32px 80px;min-width:0}
+h1{font-size:30px;margin:0 0 8px}h2{font-size:22px;margin:40px 0 12px;padding-top:12px;border-top:1px solid var(--line);scroll-margin-top:70px}
+h3{font-size:17px;margin:26px 0 8px;scroll-margin-top:70px}
+p,li{color:var(--text)}a{color:var(--accent)}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--panel)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;background:var(--panel);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+.code{position:relative;margin:12px 0}
+.code pre{background:var(--code);color:var(--codetext);padding:16px;border-radius:10px;overflow:auto;margin:0}
+.code pre code{background:none;border:0;padding:0;color:inherit;font-size:13px}
+.copy{position:absolute;right:8px;top:8px;background:#222a38;color:#fff;border:1px solid #3a4456;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+blockquote{margin:14px 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--panel);border-radius:6px}
+hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.lang{margin-left:auto;display:flex;gap:6px}.lang button{border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}.lang button.on{background:var(--accent);color:#111;border-color:var(--accent)}.head{max-width:1200px;margin:0 auto;padding:20px 32px 0}.head h1{font-size:24px}.wrap.hidden{display:none}.menu{display:none;background:none;border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--text)}
+@media (max-width:860px){.head{padding:16px 16px 0}.lang button{padding:4px 8px}.wrap{grid-template-columns:1fr}nav{display:none;position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav.open{display:block}.menu{display:inline-block}main{padding:20px 16px 60px}}
+.brand{display:inline-flex;align-items:center;text-decoration:none}
+
+
+
+.downloads{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 4px}
+.dl{display:inline-block;border:1px solid var(--line);background:var(--panel);color:var(--text);text-decoration:none;border-radius:8px;padding:8px 14px;font-size:14px}
+.dl:hover{border-color:var(--accent)}
+
+/* --- toolbar (UI fix) --- */
+header{flex-wrap:wrap;gap:10px 14px;padding:12px 20px}
+.brand{text-decoration:none}.brand{gap:10px;color:var(--text)}.brand-mark{width:30px;height:30px}.brand-name{font-weight:700;font-size:17px;letter-spacing:-.01em}
+.sub-title{color:var(--muted);font-size:14px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.actions .lang{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0}
+.lang button,.btn,.menu{height:34px;padding:0 12px;font-family:inherit;font-weight:500;font-size:13px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
+.lang button{border:0;border-radius:0}.lang button+button{border-left:1px solid var(--line)}
+.lang button.on{background:var(--accent);color:#fff;font-weight:600}
+.btn:hover,.lang button:hover,.menu:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.head{padding-top:24px}
+.head h1{font-size:26px;line-height:1.3}
+.menu{display:none}
+@media (max-width:860px){header{padding:10px 14px}.sub-title{display:none}.actions{margin-left:0;width:100%}.actions .btn,.actions .menu{flex:1 1 calc(50% - 4px);justify-content:center}.actions .lang{flex:1 1 100%}.actions .lang button{flex:1;justify-content:center}.menu{display:inline-flex}}
+nav a{min-height:32px;display:flex;align-items:center}
+</style>
+</head>
+<body>
+<header><a class="brand" href="#"><img class="brand-mark" src="logo/kiki-mark.svg" alt=""><span class="brand-name">Kiki Payment</span></a><span class="sub-title">API hujjati</span><div class="actions"><div class="lang" role="group" aria-label="Til / Язык"><button data-lang="uz">O'zbekcha</button><button data-lang="ru">Русский</button></div><a class="btn" id="dl" href="docs.md" download="kiki-payment-docs.md" data-uz="⬇ Hujjatni yuklab olish (.md)" data-ru="⬇ Скачать документацию (.md)">⬇ Hujjatni yuklab olish (.md)</a><button class="menu" onclick="document.querySelector('.lang-on nav').classList.toggle('open')" id="menu-btn" data-uz="☰ Mundarija" data-ru="☰ Содержание">☰ Mundarija</button></div></header>
+<div class="head"><h1>Kiki Payment — qisqa yo'riqnoma / Краткая инструкция</h1>
+<p><strong>Base URL:</strong> <code>https://kiki.salompremium.uz</code></p>
+<hr /></div>
+<div class="wrap lang-uz">
+<nav><a class="top" href="#uz-ozbekcha">🇺🇿 O'zbekcha</a>
+<a class="sub" href="#uz-1-dokon-tokeni">1. Do'kon tokeni</a>
+<a class="sub" href="#uz-2-tolov-yaratish">2. To'lov yaratish</a>
+<a class="sub" href="#uz-3-holatni-olish">3. Holatni olish</a>
+<a class="sub" href="#uz-4-webhook-tekshiruvi">4. Webhook tekshiruvi</a>
+<a class="sub" href="#uz-5-xatolar">5. Xatolar</a>
+<a class="sub" href="#uz-test-rejimi">Test rejimi</a></nav>
+<main><h2 id="uz-ozbekcha">🇺🇿 O'zbekcha</h2>
+<h3 id="uz-1-dokon-tokeni">1. Do'kon tokeni</h3>
+<p>Kiki'da do'kon yarating. Sizga <strong>Shop ID</strong> va <strong>Shop Password</strong> beriladi.
+Ularni har so'rovda yuboring:</p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>X-Kiki-Shop-Id: &lt;SHOP_ID&gt;
+X-Kiki-Shop-Password: &lt;PASSWORD&gt;
+</code></pre></div>
+<blockquote>
+<p>⚠️ Parolni faqat serverda saqlang. Frontend, GitHub yoki chatga qo'ymang.</p>
+</blockquote>
+<h3 id="uz-2-tolov-yaratish">2. To'lov yaratish</h3>
+<p><code>POST /payments/create</code></p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>curl -X POST &quot;https://kiki.salompremium.uz/payments/create&quot; \
+  -H &quot;X-Kiki-Shop-Id: &lt;SHOP_ID&gt;&quot; -H &quot;X-Kiki-Shop-Password: &lt;PASSWORD&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;amount&quot;: 50000, &quot;external_order_id&quot;: &quot;ORDER-123&quot;}'
+</code></pre></div>
+<p>Javobdan mijozga ko'rsating: <code>card_number</code>, <code>card_holder</code>, <code>payable_amount</code>, <code>expires_at</code>.
+Mijoz <strong><code>payable_amount</code></strong> ni to'lashi kerak (<code>amount</code> emas).</p>
+<h3 id="uz-3-holatni-olish">3. Holatni olish</h3>
+<ul>
+<li><strong>Webhook</strong> (tavsiya): do'konda webhook URL kiriting.</li>
+<li>Yoki <code>POST /payments/check</code> bilan <code>{"external_order_id": "ORDER-123"}</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Holat</th>
+<th>Ma'nosi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Kutilmoqda</td>
+</tr>
+<tr>
+<td><code>SUCCESS</code></td>
+<td>To'landi — buyurtmani tasdiqlang</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td>Muddat tugadi — yangi to'lov oching</td>
+</tr>
+<tr>
+<td><code>LATE_PAID</code></td>
+<td>Muddatdan keyin pul keldi — qo'lda tekshiring</td>
+</tr>
+</tbody>
+</table>
+<h3 id="uz-4-webhook-tekshiruvi">4. Webhook tekshiruvi</h3>
+<p>Har so'rovda <code>X-Kiki-Signature</code> ni tekshiring:</p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>import hmac, hashlib, time
+
+def verify(secret, raw_body, signature, timestamp):
+    if abs(time.time() - int(timestamp)) &gt; 300:
+        return False
+    msg = timestamp.encode() + b&quot;.&quot; + raw_body
+    expected = &quot;sha256=&quot; + hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+</code></pre></div>
+<p><code>secret</code> — webhook secret (do'kon sozlamalarida). Javob sifatida tez <code>200</code> qaytaring.</p>
+<h3 id="uz-5-xatolar">5. Xatolar</h3>
+<p><code>{"error_code": "...", "message": "..."}</code></p>
+<table>
+<thead>
+<tr>
+<th>Kod</th>
+<th>Nima qilish</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SHOP_CREDENTIALS_INVALID</code> (401)</td>
+<td>Shop ID yoki parol noto'g'ri</td>
+</tr>
+<tr>
+<td><code>BOT_NOT_CONNECTED</code> (409)</td>
+<td>Merchant to'lov botini ulamagan</td>
+</tr>
+<tr>
+<td><code>MIN_AMOUNT_NOT_MET</code> (422)</td>
+<td>Summa minimumdan kam (standart 1000 so'm)</td>
+</tr>
+<tr>
+<td><code>AMOUNT_POOL_EXHAUSTED</code> (409)</td>
+<td>Boshqa summa bilan yoki keyinroq qayta urining</td>
+</tr>
+</tbody>
+</table>
+<h3 id="uz-test-rejimi">Test rejimi</h3>
+<p>Test do'konda <code>"test": true</code> keladi — bu pulsiz "to'landi". Bunday to'lov uchun tovar bermang.</p>
+<hr /></main>
+</div>
+<div class="wrap lang-ru">
+<nav><a class="top" href="#ru-_1">🇷🇺 Русский</a>
+<a class="sub" href="#ru-1">1. Токен магазина</a>
+<a class="sub" href="#ru-2">2. Создать платёж</a>
+<a class="sub" href="#ru-3">3. Статус</a>
+<a class="sub" href="#ru-4-webhook">4. Проверка webhook</a>
+<a class="sub" href="#ru-5">5. Ошибки</a>
+<a class="sub" href="#ru-_2">Тестовый режим</a></nav>
+<main><h2 id="ru-_1">🇷🇺 Русский</h2>
+<h3 id="ru-1">1. Токен магазина</h3>
+<p>Создайте магазин в Kiki. Вы получите <strong>Shop ID</strong> и <strong>Shop Password</strong>.
+Передавайте их в каждом запросе:</p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>X-Kiki-Shop-Id: &lt;SHOP_ID&gt;
+X-Kiki-Shop-Password: &lt;PASSWORD&gt;
+</code></pre></div>
+<blockquote>
+<p>⚠️ Храните пароль только на сервере.</p>
+</blockquote>
+<h3 id="ru-2">2. Создать платёж</h3>
+<p><code>POST /payments/create</code></p>
+<p>Из ответа покажите клиенту <code>card_number</code>, <code>card_holder</code>, <code>payable_amount</code>, <code>expires_at</code>.
+Клиент должен перевести <strong><code>payable_amount</code></strong> (не <code>amount</code>).</p>
+<h3 id="ru-3">3. Статус</h3>
+<ul>
+<li><strong>Webhook</strong> (рекомендуется) — укажите URL в настройках магазина.</li>
+<li>Или <code>POST /payments/check</code> с <code>{"external_order_id": "ORDER-123"}</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Статус</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Ожидает оплаты</td>
+</tr>
+<tr>
+<td><code>SUCCESS</code></td>
+<td>Оплачено — подтвердите заказ</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td>Срок истёк — создайте новый платёж</td>
+</tr>
+<tr>
+<td><code>LATE_PAID</code></td>
+<td>Оплата после срока — проверьте вручную</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ru-4-webhook">4. Проверка webhook</h3>
+<p>Проверяйте <code>X-Kiki-Signature</code> (код — см. пример выше на Python, функция <code>verify</code>).
+Отвечайте <code>200</code> быстро.</p>
+<h3 id="ru-5">5. Ошибки</h3>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>Что делать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SHOP_CREDENTIALS_INVALID</code> (401)</td>
+<td>Неверный Shop ID или пароль</td>
+</tr>
+<tr>
+<td><code>BOT_NOT_CONNECTED</code> (409)</td>
+<td>Владелец не подключил платёжный бот</td>
+</tr>
+<tr>
+<td><code>MIN_AMOUNT_NOT_MET</code> (422)</td>
+<td>Сумма ниже минимума (по умолчанию 1000)</td>
+</tr>
+<tr>
+<td><code>AMOUNT_POOL_EXHAUSTED</code> (409)</td>
+<td>Выберите другую сумму или повторите позже</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ru-_2">Тестовый режим</h3>
+<p>В тестовом магазине приходит <code>"test": true</code> — оплата без денег. Товар при этом не отдавайте.</p></main>
+</div>
+<script>
+(function(){
+  var KEY='kiki-lang', lang='uz';
+  try { var saved=localStorage.getItem(KEY); if(saved==='uz'||saved==='ru'){lang=saved;} else { lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; } } catch(e){ lang=(navigator.language||'').toLowerCase().indexOf('ru')===0?'ru':'uz'; }
+  function show(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll('.wrap').forEach(function(w){ w.classList.toggle('hidden', !w.classList.contains('lang-'+l)); w.classList.toggle('lang-on', w.classList.contains('lang-'+l)); });
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.dataset.lang===l); });
+    var mb=document.getElementById('menu-btn'); if(mb){ mb.textContent = mb.getAttribute('data-'+l); }
+    var dl=document.getElementById('dl'); if(dl){ dl.textContent = dl.getAttribute('data-'+l) || dl.getAttribute('data-uz'); }
+    try{ localStorage.setItem(KEY,l); }catch(e){}
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){ b.addEventListener('click', function(){ show(b.dataset.lang); }); });
+  show(lang);
+})();
+document.querySelectorAll('button.copy').forEach(function(b){
+  b.addEventListener('click', function(){
+    var t = b.parentElement.querySelector('code').innerText;
+    var done = function(){ b.textContent='Nusxalandi ✓'; setTimeout(function(){b.textContent='Nusxalash'},1500); };
+    if (navigator.clipboard) { navigator.clipboard.writeText(t).then(done, function(){}); }
+  });
+});
+</script>
+</body>
+</html>
