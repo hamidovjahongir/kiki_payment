@@ -71,7 +71,16 @@ nav a{min-height:32px;display:flex;align-items:center}
 <a class="sub" href="#uz-3-holatni-olish">3. Holatni olish</a>
 <a class="sub" href="#uz-4-webhook-tekshiruvi">4. Webhook tekshiruvi</a>
 <a class="sub" href="#uz-5-xatolar">5. Xatolar</a>
-<a class="sub" href="#uz-test-rejimi">Test rejimi</a></nav>
+<a class="sub" href="#uz-test-rejimi">Test rejimi</a>
+<a class="top" href="#uz-qoshimcha-malumot">Qo'shimcha ma'lumot</a>
+<a class="sub" href="#uz-1-tolov-yaratish-barcha-parametrlar">1. To'lov yaratish — barcha parametrlar</a>
+<a class="sub" href="#uz-2-javob-maydonlari">2. Javob maydonlari</a>
+<a class="sub" href="#uz-3-qoshimcha-endpointlar">3. Qo'shimcha endpointlar</a>
+<a class="sub" href="#uz-4-external_order_id-qayta-yuborilsa">4. external_order_id qayta yuborilsa</a>
+<a class="sub" href="#uz-5-holatlar-qanday-ozgaradi">5. Holatlar qanday o'zgaradi</a>
+<a class="sub" href="#uz-6-webhook-toliq-format">6. Webhook — to'liq format</a>
+<a class="sub" href="#uz-7-barcha-xato-kodlari-tolov-api">7. Barcha xato kodlari (to'lov API)</a>
+<a class="sub" href="#uz-8-test-rejimi-aniqroq">8. Test rejimi — aniqroq</a></nav>
 <main><h2 id="uz-ozbekcha">🇺🇿 O'zbekcha</h2>
 <h3 id="uz-1-dokon-tokeni">1. Do'kon tokeni</h3>
 <p>Kiki'da do'kon yarating. Sizga <strong>Shop ID</strong> va <strong>Shop Password</strong> beriladi.
@@ -164,6 +173,254 @@ def verify(secret, raw_body, signature, timestamp):
 </table>
 <h3 id="uz-test-rejimi">Test rejimi</h3>
 <p>Test do'konda <code>"test": true</code> keladi — bu pulsiz "to'landi". Bunday to'lov uchun tovar bermang.</p>
+<hr />
+<h2 id="uz-qoshimcha-malumot">Qo'shimcha ma'lumot</h2>
+<h3 id="uz-1-tolov-yaratish-barcha-parametrlar">1. To'lov yaratish — barcha parametrlar</h3>
+<p><code>POST /payments/create</code></p>
+<table>
+<thead>
+<tr>
+<th>Maydon</th>
+<th>Turi</th>
+<th>Majburiy</th>
+<th>Izoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amount</code></td>
+<td>int</td>
+<td>ha</td>
+<td>So'mda, &gt; 0. Do'kon minimumidan kam bo'lmasin (standart 1000)</td>
+</tr>
+<tr>
+<td><code>external_order_id</code></td>
+<td>string ≤128</td>
+<td>yo'q</td>
+<td>Sizning buyurtma ID'ingiz. Tavsiya qilinadi</td>
+</tr>
+<tr>
+<td><code>expires_in_sec</code></td>
+<td>int</td>
+<td>yo'q</td>
+<td>To'lov muddati: <strong>60–1800 soniya</strong>. Berilmasa do'kon sozlamasi, u ham bo'lmasa <strong>600</strong> (10 daqiqa)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="uz-2-javob-maydonlari">2. Javob maydonlari</h3>
+<p><code>/payments/create</code>, <code>/payments/check</code> va <code>GET /payments/{payment_id}</code> javoblarida bir xil. Webhook <code>data</code> da <code>expires_in_sec</code> va karta maydonlari bo'lmaydi:</p>
+<table>
+<thead>
+<tr>
+<th>Maydon</th>
+<th>Izoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payment_id</code></td>
+<td>Kiki to'lov ID'si</td>
+</tr>
+<tr>
+<td><code>shop_id</code></td>
+<td>Do'kon ID'si</td>
+</tr>
+<tr>
+<td><code>external_order_id</code></td>
+<td>Siz yuborgan ID (yoki <code>null</code>)</td>
+</tr>
+<tr>
+<td><code>requested_amount</code></td>
+<td>Siz so'ragan summa</td>
+</tr>
+<tr>
+<td><code>payable_amount</code></td>
+<td><strong>Mijoz aynan shuni o'tkazadi</strong> (<code>amount</code> + 0…999 so'm)</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>Muddat tugash vaqti, UTC (ISO 8601)</td>
+</tr>
+<tr>
+<td><code>expires_in_sec</code></td>
+<td>Qancha soniya qoldi (faqat REST javobida)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>PENDING</code> / <code>SUCCESS</code> / <code>EXPIRED</code> / <code>LATE_PAID</code></td>
+</tr>
+<tr>
+<td><code>paid_at</code></td>
+<td>Pul kelgan vaqt (UTC) yoki <code>null</code></td>
+</tr>
+<tr>
+<td><code>card_number</code>, <code>card_holder</code>, <code>card_last4</code></td>
+<td>Pul o'tkaziladigan karta (faqat REST javobida)</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td><code>true</code> — test do'kon, pul kelmagan</td>
+</tr>
+<tr>
+<td><code>resolved_by</code></td>
+<td>Faqat webhook'da: <code>auto</code> (Kiki o'zi topdi), <code>merchant</code> (sotuvchi qo'lda bog'ladi), <code>test</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="uz-3-qoshimcha-endpointlar">3. Qo'shimcha endpointlar</h3>
+<table>
+<thead>
+<tr>
+<th>So'rov</th>
+<th>Nima qiladi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /payments/{payment_id}</code></td>
+<td>To'lovni Kiki ID'si bo'yicha olish</td>
+</tr>
+<tr>
+<td><code>POST /payments/{payment_id}/check</code></td>
+<td>Xuddi shu, POST orqali</td>
+</tr>
+<tr>
+<td><code>GET /payments</code></td>
+<td>Ro'yxat. Parametrlar: <code>limit</code> (1–200, standart 50), <code>offset</code>, <code>status</code>, <code>external_order_id</code>, <code>created_from</code>, <code>created_to</code></td>
+</tr>
+</tbody>
+</table>
+<p>Hammasi bir xil <code>X-Kiki-Shop-Id</code> / <code>X-Kiki-Shop-Password</code> headerlari bilan ishlaydi.</p>
+<h3 id="uz-4-external_order_id-qayta-yuborilsa">4. <code>external_order_id</code> qayta yuborilsa</h3>
+<table>
+<thead>
+<tr>
+<th>Avvalgi to'lov holati</th>
+<th>Natija</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Yangi to'lov ochilmaydi, <strong>o'sha to'lov qaytadi</strong> (qayta urinish xavfsiz)</td>
+</tr>
+<tr>
+<td><code>SUCCESS</code> / <code>LATE_PAID</code></td>
+<td><code>PAYMENT_ALREADY_COMPLETED</code> (409)</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td><code>DUPLICATE_EXTERNAL_ORDER_ID</code> (409)</td>
+</tr>
+</tbody>
+</table>
+<p>➡️ Muddati tugagan to'lov o'rniga <strong>yangi <code>external_order_id</code></strong> bilan yangi to'lov oching.</p>
+<h3 id="uz-5-holatlar-qanday-ozgaradi">5. Holatlar qanday o'zgaradi</h3>
+<ul>
+<li>To'lov oynasi: <code>expires_at</code> + <strong>45 soniya</strong> (bank xabari kechikishi uchun). Shu vaqt ichida kelgan pul → <code>SUCCESS</code>.</li>
+<li>Oyna yopilgach to'lov <code>EXPIRED</code> bo'ladi. Uning summasi yana <strong>15 daqiqa</strong> shu kartada band turadi.</li>
+<li>Shu 15 daqiqa ichida pul kelsa → <code>LATE_PAID</code>.</li>
+<li>Undan keyin kelgan pul hech qaysi buyurtmaga avtomatik bog'lanmaydi. Sotuvchi uni Kiki'da qo'lda bog'lashi mumkin → to'lov <code>SUCCESS</code> bo'ladi (<code>resolved_by: "merchant"</code>).</li>
+</ul>
+<p>⚠️ Demak <strong><code>EXPIRED</code> yakuniy holat emas</strong> — keyin <code>LATE_PAID</code> yoki <code>SUCCESS</code> bo'lishi mumkin. Webhook'ni yoki tekshiruvni muddat tugagandan keyin ham davom ettiring.</p>
+<h3 id="uz-6-webhook-toliq-format">6. Webhook — to'liq format</h3>
+<p><strong>Headerlar:</strong></p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>Content-Type: application/json
+X-Kiki-Event: payment.paid
+X-Kiki-Delivery: &lt;delivery_id&gt;
+X-Kiki-Timestamp: &lt;unix soniya&gt;
+X-Kiki-Signature: sha256=&lt;hex&gt;
+</code></pre></div>
+<p>(<code>X-Kiki-Signature</code> faqat do'konda webhook secret bo'lsa keladi.)</p>
+<p><strong>Body:</strong></p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>{&quot;event&quot;: &quot;payment.paid&quot;, &quot;delivery_id&quot;: &quot;...&quot;, &quot;data&quot;: { ...2-bo'limdagi maydonlar... }}
+</code></pre></div>
+<p><strong>Eventlar:</strong>
+| Event | Qachon |
+|---|---|
+| <code>payment.paid</code> | To'landi (avtomatik, qo'lda bog'langan yoki test) |
+| <code>payment.late_paid</code> | Muddatdan keyin to'landi — qo'lda tekshiring |
+| <code>payment.expired</code> | Muddat tugadi |</p>
+<p><strong>Qayta yuborish:</strong>
+- Javobingiz <strong>2xx</strong> bo'lsa yetkazildi deb hisoblanadi. Boshqa kod yoki 10 soniyadan ortiq kutish → qayta yuboriladi.
+- Kutish vaqti har safar oshadi (10 s, 20 s, 40 s … eng ko'pi 1 soat), jami <strong>8 marta</strong>.
+- Bitta xabar bir necha marta kelishi mumkin — <strong><code>delivery_id</code> ni saqlab, takrorini o'tkazib yuboring</strong>.
+- Webhook URL <strong>ochiq internet manzili</strong> bo'lishi kerak (localhost / ichki IP qabul qilinmaydi).</p>
+<h3 id="uz-7-barcha-xato-kodlari-tolov-api">7. Barcha xato kodlari (to'lov API)</h3>
+<table>
+<thead>
+<tr>
+<th>Kod</th>
+<th>HTTP</th>
+<th>Ma'nosi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SHOP_CREDENTIALS_INVALID</code></td>
+<td>401</td>
+<td>Shop ID yoki parol noto'g'ri</td>
+</tr>
+<tr>
+<td><code>SHOP_INACTIVE</code></td>
+<td>403</td>
+<td>Do'kon o'chirilgan</td>
+</tr>
+<tr>
+<td><code>PAYMENT_NOT_FOUND</code></td>
+<td>404</td>
+<td>Bunday to'lov yo'q</td>
+</tr>
+<tr>
+<td><code>BOT_NOT_CONNECTED</code></td>
+<td>409</td>
+<td>Sotuvchining Telegram'i Kiki'ga ulanmagan, to'lov ochilmadi</td>
+</tr>
+<tr>
+<td><code>NO_CARD_AVAILABLE</code></td>
+<td>409</td>
+<td>Do'konda faol karta yo'q</td>
+</tr>
+<tr>
+<td><code>AMOUNT_POOL_EXHAUSTED</code></td>
+<td>409</td>
+<td>Bu summa uchun bo'sh noyob summa qolmadi</td>
+</tr>
+<tr>
+<td><code>DUPLICATE_EXTERNAL_ORDER_ID</code></td>
+<td>409</td>
+<td>Bu ID bilan muddati tugagan to'lov bor</td>
+</tr>
+<tr>
+<td><code>PAYMENT_ALREADY_COMPLETED</code></td>
+<td>409</td>
+<td>Bu ID allaqachon to'langan</td>
+</tr>
+<tr>
+<td><code>MIN_AMOUNT_NOT_MET</code></td>
+<td>422</td>
+<td>Summa minimumdan kam</td>
+</tr>
+<tr>
+<td><code>PAYMENT_TIMEOUT_OUT_OF_RANGE</code></td>
+<td>422</td>
+<td><code>expires_in_sec</code> 60–1800 oralig'ida emas</td>
+</tr>
+<tr>
+<td><code>VALIDATION_ERROR</code></td>
+<td>422</td>
+<td>So'rov formati noto'g'ri</td>
+</tr>
+<tr>
+<td><code>INTERNAL_SERVER_ERROR</code></td>
+<td>500</td>
+<td>Kiki ichki xatosi — keyinroq qayta urining</td>
+</tr>
+</tbody>
+</table>
+<h3 id="uz-8-test-rejimi-aniqroq">8. Test rejimi — aniqroq</h3>
+<p>Test do'konda <code>/payments/create</code> darhol <code>status: "SUCCESS"</code>, <code>test: true</code> qaytaradi va <code>payment.paid</code> webhook yuboradi. <code>payable_amount</code> = <code>amount</code> (qo'shimcha summa yo'q).</p>
+<hr />
 <hr /></main>
 </div>
 <div class="wrap lang-ru">
@@ -173,7 +430,16 @@ def verify(secret, raw_body, signature, timestamp):
 <a class="sub" href="#ru-3">3. Статус</a>
 <a class="sub" href="#ru-4-webhook">4. Проверка webhook</a>
 <a class="sub" href="#ru-5">5. Ошибки</a>
-<a class="sub" href="#ru-_2">Тестовый режим</a></nav>
+<a class="sub" href="#ru-_2">Тестовый режим</a>
+<a class="top" href="#ru-_3">Дополнительно</a>
+<a class="sub" href="#ru-1_1">1. Создание платежа — все параметры</a>
+<a class="sub" href="#ru-2_1">2. Поля ответа</a>
+<a class="sub" href="#ru-3_1">3. Дополнительные эндпоинты</a>
+<a class="sub" href="#ru-4-external_order_id">4. Повторный external_order_id</a>
+<a class="sub" href="#ru-5_1">5. Как меняется статус</a>
+<a class="sub" href="#ru-6-webhook">6. Webhook — полный формат</a>
+<a class="sub" href="#ru-7-api">7. Все коды ошибок (платёжный API)</a>
+<a class="sub" href="#ru-8">8. Тестовый режим — подробнее</a></nav>
 <main><h2 id="ru-_1">🇷🇺 Русский</h2>
 <h3 id="ru-1">1. Токен магазина</h3>
 <p>Создайте магазин в Kiki. Вы получите <strong>Shop ID</strong> и <strong>Shop Password</strong>.
@@ -250,7 +516,254 @@ X-Kiki-Shop-Password: &lt;PASSWORD&gt;
 </tbody>
 </table>
 <h3 id="ru-_2">Тестовый режим</h3>
-<p>В тестовом магазине приходит <code>"test": true</code> — оплата без денег. Товар при этом не отдавайте.</p></main>
+<p>В тестовом магазине приходит <code>"test": true</code> — оплата без денег. Товар при этом не отдавайте.</p>
+<hr />
+<h2 id="ru-_3">Дополнительно</h2>
+<h3 id="ru-1_1">1. Создание платежа — все параметры</h3>
+<p><code>POST /payments/create</code></p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обяз.</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amount</code></td>
+<td>int</td>
+<td>да</td>
+<td>В сумах, &gt; 0, не меньше минимума магазина (по умолчанию 1000)</td>
+</tr>
+<tr>
+<td><code>external_order_id</code></td>
+<td>string ≤128</td>
+<td>нет</td>
+<td>Ваш ID заказа. Рекомендуется</td>
+</tr>
+<tr>
+<td><code>expires_in_sec</code></td>
+<td>int</td>
+<td>нет</td>
+<td>Срок оплаты: <strong>60–1800 сек</strong>. Иначе — настройка магазина, иначе <strong>600</strong> (10 мин)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ru-2_1">2. Поля ответа</h3>
+<p>Одинаковы для <code>/payments/create</code>, <code>/payments/check</code> и <code>GET /payments/{payment_id}</code>. В <code>data</code> webhook нет <code>expires_in_sec</code> и полей карты:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payment_id</code></td>
+<td>ID платежа в Kiki</td>
+</tr>
+<tr>
+<td><code>shop_id</code></td>
+<td>ID магазина</td>
+</tr>
+<tr>
+<td><code>external_order_id</code></td>
+<td>Ваш ID (или <code>null</code>)</td>
+</tr>
+<tr>
+<td><code>requested_amount</code></td>
+<td>Запрошенная сумма</td>
+</tr>
+<tr>
+<td><code>payable_amount</code></td>
+<td><strong>Ровно эту сумму переводит клиент</strong> (<code>amount</code> + 0…999 сум)</td>
+</tr>
+<tr>
+<td><code>expires_at</code></td>
+<td>Время окончания, UTC (ISO 8601)</td>
+</tr>
+<tr>
+<td><code>expires_in_sec</code></td>
+<td>Сколько секунд осталось (только в REST)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>PENDING</code> / <code>SUCCESS</code> / <code>EXPIRED</code> / <code>LATE_PAID</code></td>
+</tr>
+<tr>
+<td><code>paid_at</code></td>
+<td>Время поступления денег (UTC) или <code>null</code></td>
+</tr>
+<tr>
+<td><code>card_number</code>, <code>card_holder</code>, <code>card_last4</code></td>
+<td>Карта для перевода (только в REST)</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td><code>true</code> — тестовый магазин, денег не было</td>
+</tr>
+<tr>
+<td><code>resolved_by</code></td>
+<td>Только в webhook: <code>auto</code> (Kiki нашёл сам), <code>merchant</code> (продавец привязал вручную), <code>test</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="ru-3_1">3. Дополнительные эндпоинты</h3>
+<table>
+<thead>
+<tr>
+<th>Запрос</th>
+<th>Что делает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /payments/{payment_id}</code></td>
+<td>Платёж по ID Kiki</td>
+</tr>
+<tr>
+<td><code>POST /payments/{payment_id}/check</code></td>
+<td>То же, через POST</td>
+</tr>
+<tr>
+<td><code>GET /payments</code></td>
+<td>Список. Параметры: <code>limit</code> (1–200, по умолч. 50), <code>offset</code>, <code>status</code>, <code>external_order_id</code>, <code>created_from</code>, <code>created_to</code></td>
+</tr>
+</tbody>
+</table>
+<p>Все — с теми же заголовками <code>X-Kiki-Shop-Id</code> / <code>X-Kiki-Shop-Password</code>.</p>
+<h3 id="ru-4-external_order_id">4. Повторный <code>external_order_id</code></h3>
+<table>
+<thead>
+<tr>
+<th>Статус прежнего платежа</th>
+<th>Результат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Новый не создаётся, <strong>возвращается тот же</strong> (повтор безопасен)</td>
+</tr>
+<tr>
+<td><code>SUCCESS</code> / <code>LATE_PAID</code></td>
+<td><code>PAYMENT_ALREADY_COMPLETED</code> (409)</td>
+</tr>
+<tr>
+<td><code>EXPIRED</code></td>
+<td><code>DUPLICATE_EXTERNAL_ORDER_ID</code> (409)</td>
+</tr>
+</tbody>
+</table>
+<p>➡️ Вместо истёкшего платежа создайте новый с <strong>новым <code>external_order_id</code></strong>.</p>
+<h3 id="ru-5_1">5. Как меняется статус</h3>
+<ul>
+<li>Окно оплаты: <code>expires_at</code> + <strong>45 сек</strong> (задержка банковского сообщения). Деньги в этом окне → <code>SUCCESS</code>.</li>
+<li>После окна платёж становится <code>EXPIRED</code>, его сумма ещё <strong>15 минут</strong> зарезервирована на карте.</li>
+<li>Деньги в эти 15 минут → <code>LATE_PAID</code>.</li>
+<li>Позже деньги автоматически не привязываются. Продавец может привязать вручную в Kiki → <code>SUCCESS</code> (<code>resolved_by: "merchant"</code>).</li>
+</ul>
+<p>⚠️ <strong><code>EXPIRED</code> — не окончательный статус</strong>: потом может стать <code>LATE_PAID</code> или <code>SUCCESS</code>. Продолжайте принимать webhook / проверять статус и после истечения срока.</p>
+<h3 id="ru-6-webhook">6. Webhook — полный формат</h3>
+<p><strong>Заголовки:</strong></p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>Content-Type: application/json
+X-Kiki-Event: payment.paid
+X-Kiki-Delivery: &lt;delivery_id&gt;
+X-Kiki-Timestamp: &lt;unix-секунды&gt;
+X-Kiki-Signature: sha256=&lt;hex&gt;
+</code></pre></div>
+<p>(<code>X-Kiki-Signature</code> — только если в магазине задан webhook secret.)</p>
+<p><strong>Тело:</strong></p>
+<div class="code"><button class="copy">Nusxalash</button><pre><code>{&quot;event&quot;: &quot;payment.paid&quot;, &quot;delivery_id&quot;: &quot;...&quot;, &quot;data&quot;: { ...поля из раздела 2... }}
+</code></pre></div>
+<p><strong>События:</strong>
+| Событие | Когда |
+|---|---|
+| <code>payment.paid</code> | Оплачено (автоматически, вручную или тест) |
+| <code>payment.late_paid</code> | Оплачено после срока — проверьте вручную |
+| <code>payment.expired</code> | Срок истёк |</p>
+<p><strong>Повторы:</strong>
+- Доставлено, если ответ <strong>2xx</strong>. Другой код или ожидание &gt; 10 сек → повтор.
+- Интервал растёт (10 с, 20 с, 40 с … максимум 1 час), всего <strong>8 попыток</strong>.
+- Одно событие может прийти несколько раз — <strong>сохраняйте <code>delivery_id</code> и пропускайте повторы</strong>.
+- Webhook URL должен быть <strong>публичным адресом</strong> (localhost / внутренние IP не принимаются).</p>
+<h3 id="ru-7-api">7. Все коды ошибок (платёжный API)</h3>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>HTTP</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SHOP_CREDENTIALS_INVALID</code></td>
+<td>401</td>
+<td>Неверный Shop ID или пароль</td>
+</tr>
+<tr>
+<td><code>SHOP_INACTIVE</code></td>
+<td>403</td>
+<td>Магазин отключён</td>
+</tr>
+<tr>
+<td><code>PAYMENT_NOT_FOUND</code></td>
+<td>404</td>
+<td>Платёж не найден</td>
+</tr>
+<tr>
+<td><code>BOT_NOT_CONNECTED</code></td>
+<td>409</td>
+<td>Telegram продавца не подключён к Kiki, платёж не создан</td>
+</tr>
+<tr>
+<td><code>NO_CARD_AVAILABLE</code></td>
+<td>409</td>
+<td>В магазине нет активной карты</td>
+</tr>
+<tr>
+<td><code>AMOUNT_POOL_EXHAUSTED</code></td>
+<td>409</td>
+<td>Нет свободных уникальных сумм для этой суммы</td>
+</tr>
+<tr>
+<td><code>DUPLICATE_EXTERNAL_ORDER_ID</code></td>
+<td>409</td>
+<td>С этим ID есть истёкший платёж</td>
+</tr>
+<tr>
+<td><code>PAYMENT_ALREADY_COMPLETED</code></td>
+<td>409</td>
+<td>Этот ID уже оплачен</td>
+</tr>
+<tr>
+<td><code>MIN_AMOUNT_NOT_MET</code></td>
+<td>422</td>
+<td>Сумма ниже минимума</td>
+</tr>
+<tr>
+<td><code>PAYMENT_TIMEOUT_OUT_OF_RANGE</code></td>
+<td>422</td>
+<td><code>expires_in_sec</code> вне 60–1800</td>
+</tr>
+<tr>
+<td><code>VALIDATION_ERROR</code></td>
+<td>422</td>
+<td>Неверный формат запроса</td>
+</tr>
+<tr>
+<td><code>INTERNAL_SERVER_ERROR</code></td>
+<td>500</td>
+<td>Внутренняя ошибка Kiki — повторите позже</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ru-8">8. Тестовый режим — подробнее</h3>
+<p>В тестовом магазине <code>/payments/create</code> сразу возвращает <code>status: "SUCCESS"</code>, <code>test: true</code> и отправляет webhook <code>payment.paid</code>. <code>payable_amount</code> = <code>amount</code> (без надбавки).</p></main>
 </div>
 <script>
 (function(){
